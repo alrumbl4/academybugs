@@ -41,11 +41,12 @@ jobs:
         path: allure-report
         retention-days: 3
 
-    - name: Create empty history directory
+    - name: Prepare history directory
       if: always()
       run: mkdir -p allure-report/history
 
-    - name: Download previous Allure history
+    - name: Download previous Allure history (if exists)
+      id: download-history
       uses: actions/download-artifact@v4
       with:
         name: allure-history
@@ -55,8 +56,11 @@ jobs:
     - name: Generate Allure report with history
       if: always()
       run: |
-        mkdir -p allure-report/history
-        cp -r allure-report/history allure-results/ || echo "No history found"
+        if [ -d "allure-report/history" ] && [ "$(ls -A allure-report/history)" ]; then
+          cp -r allure-report/history allure-results/
+        else
+          echo "No history found, skipping..."
+        fi
         npx allure generate allure-results -o allure-report --clean
         
     - name: Upload Allure history
