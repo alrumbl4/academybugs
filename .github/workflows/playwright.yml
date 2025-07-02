@@ -1,105 +1,71 @@
-name: Playwright E2E Tests with Enhanced Allure Reporting
-
+# Называем workflow
+name: pw tests
+# Когда мы запускаем автотесты
 on:
   push:
-    branches: [main, master]
+    branches: [ main, master ]
   pull_request:
-    branches: [main, master]
+    branches: [ main, master ]
+ # ручной запуск   
   workflow_dispatch:
-
+# jobs
 jobs:
   e2eTests:
     timeout-minutes: 30
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-    
     steps:
-      # Initial setup
+      # делаем чекаут
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # устанавливаем node.js
+      - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'npm'
-      
-      # Enhanced dependency installation
-      - name: Install dependencies
-        run: |
-          npm ci
-          npm install @playwright/test
-          echo "Playwright version: $(npx playwright --version)"
-      
-      # Browser installation with cache
-      - name: Install Playwright browsers
-        uses: browser-actions/setup-playwright@v1
-        with:
-          install-deps: true
-      
-      # Test execution with improved reporting
-      - name: Run Playwright tests
-        run: |
-          mkdir -p test-results allure-results
-          npx playwright test \
-            --reporter=line,json,html \
-            --output=test-results/ \
-            --workers=3 \
-            --retries=2 \
-            || echo "Tests completed with exit code $?"
-      
-      # Artifacts handling with better error tolerance
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
+      # устанавливаем пакеты node
+      - name: Установить пакеты
+        run: npm i
+      # устанавливаем PW
+      - name: Установить PW
+        run: npx playwright install --with-deps
+      - name: Запустить PW
+        run: npm run test
+      # Сохраняем отчет PW  
+      - uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
-          name: playwright-artifacts
-          path: |
-            test-results/
-            allure-results/
-            playwright-report/
-          retention-days: 7
-          if-no-files-found: warn
-      
-      # Allure report generation with history
-      - name: Prepare Allure report
+          name: test-results
+          path: test-results
+          retention-days: 20
+      # Сохраняем результаты Allure 
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: simple-elf/allure-report-action@master
+        continue-on-error: true
+        with:
+          name: allure-results
+          path: allure-results
+          retention-days: 20
+      # Забираем результаты предыдущего запуска  
+      - uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+      # Формируем из allure-results отчёт allure-report
+      - uses: simple-elf/allure-report-action@master
+        if: always()
         id: allure-report
         with:
           allure_results: allure-results
           gh_pages: gh-pages
           allure_report: allure-report
           allure_history: allure-history
-          keep_reports: 30
-          enable_charts: true
-          enable_historical: true
-      
-      # Enhanced deployment with cleanup
-      - name: Deploy Allure Report
+          keep_reports: 20
+      # Деплоим отчёт
+      - name: deploy report
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-report
-          force_orphan: true
-          keep_files: false
-          cname: tests.yourdomain.com  # Optional for custom domain
-      
-      # Telegram notification with rich formatting
-      - name: Notify Test Results
-        if: always()
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message: |
-            *${{ github.workflow }} Results*
-            🚀 *Repository*: ${{ github.repository }}
-            ⏱ *Run ID*: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            📊 *Report*: [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.repository }}/allure-report)
-            📅 *Date*: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
-          parse_mode: markdown
+          publish_dir: allure-history
