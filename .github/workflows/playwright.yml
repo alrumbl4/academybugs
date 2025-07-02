@@ -70,9 +70,11 @@ jobs:
       - name: Render notifications config
         run: |
           mkdir -p notifications/tmp
+          REPORT_LINK="https://alrumbl4.github.io/academybugs/$GITHUB_RUN_NUMBER/index.html"
           sed \
             -e "s|\$TELEGRAM_BOT_TOKEN|${{ secrets.TELEGRAM_BOT_TOKEN }}|g" \
             -e "s|\$TELEGRAM_CHAT_ID|${{ secrets.TELEGRAM_CHAT_ID }}|g" \
+            -e "s|\$REPORT_LINK|$REPORT_LINK|g" \
             notifications/telegram.json > notifications/tmp/config.json
         shell: bash
         
