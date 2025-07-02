@@ -1,71 +1,60 @@
 name: Playwright Tests with Allure
-
 on:
   push:
-    branches: [ master ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ master ]
-
+    branches: [ main, master ]
+  workflow_dispatch:
 jobs:
   test:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
         
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
       
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
       
-    - name: Run tests
-      run: npx playwright test
-      
-    - name: Prepare directories
-      if: always()
-      run: |
-        mkdir -p allure-report/history
-        mkdir -p allure-results/history
-        
-    - name: Try download history
-      id: download-history
-      continue-on-error: true
-      uses: actions/download-artifact@v4
-      with:
-        name: allure-history
-        path: allure-report/history
-        
-    - name: Generate Allure report
-      if: always()
-      run: |
-        if [ -d "allure-report/history" ] && [ "$(ls -A allure-report/history)" ]; then
-          echo "Using existing history"
-          cp -r allure-report/history allure-results/
-        else
-          echo "No history found - starting fresh"
-        fi
-        
-        npm install -g allure-commandline
-        allure generate allure-results -o allure-report --clean
-        
-    - name: Upload history artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-history
-        path: allure-report/history
-        retention-days: 30
-        
-    - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main' && success()
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./allure-report
-        keep_files: true
-        force_orphan: true
+      - name: Run tests
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 20
+
+      - uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - uses: simple-elf/allure-report-action@master
+        if: always()
+        id: allure-report
+        with:
+          allure_results: allure-results
+          gh_pages: gh-pages
+          allure_report: allure-report
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: deploy report
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
