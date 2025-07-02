@@ -2,9 +2,7 @@
     "base": {
       "logo": "",
       "project": "academybugs",
-      "environment": "some env",
-      "comment": "some comment",
-      "reportLink": "",
+      "reportLink": "$REPORT_LINK",
       "language": "ru",
       "allureFolder": "allure-report",
       "enableChart": true,
