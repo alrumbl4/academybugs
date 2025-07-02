@@ -77,9 +77,6 @@ jobs:
             -e "s|\$REPORT_LINK|$REPORT_LINK|g" \
             notifications/telegram.json > notifications/tmp/config.json
         shell: bash
-        
-      - name: Показать конфиг
-        run: cat notifications/tmp/config.json
 
       - name: Send Telegram notification
         run: |
