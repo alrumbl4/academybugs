@@ -1,0 +1,6 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","5122","Переход к горящему товару","chromium","Wed Jul 02 07:55:53 GMT 2025","passed","Wed Jul 02 07:55:58 GMT 2025","","","",""
+"","6125","Переход на страницу производителя товара","chromium","Wed Jul 02 07:55:43 GMT 2025","passed","Wed Jul 02 07:55:49 GMT 2025","","","",""
+"","3848","Размер изображения соответствует размеру карточки товара","chromium","Wed Jul 02 07:55:49 GMT 2025","passed","Wed Jul 02 07:55:53 GMT 2025","","","",""
+"","4452","Отображение описания товара в карточке","chromium","Wed Jul 02 07:55:39 GMT 2025","passed","Wed Jul 02 07:55:43 GMT 2025","","","",""
+"","14368","Написание комментария к товару","chromium","Wed Jul 02 07:55:24 GMT 2025","passed","Wed Jul 02 07:55:38 GMT 2025","","","",""
