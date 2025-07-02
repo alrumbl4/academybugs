@@ -1,14 +1,14 @@
-name: Playwright Tests with Allure
+name: Playwright Tests with Allure & Telegram
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
-  test:
+  e2eTests:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -17,63 +17,62 @@ jobs:
       id-token: write
     
     steps:
+      # Шаг 1: Подготовка окружения
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-        
+          cache: 'npm'
+
+      # Шаг 2: Установка зависимостей
       - name: Install dependencies
         run: |
           npm ci
           npm install @playwright/test
-      
+          npm install https://github.com/qa-guru/allure-notifications.git
+
+      # Шаг 3: Установка браузеров
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-      
-      - name: Run tests with results output
+
+      # Шаг 4: Запуск тестов
+      - name: Run tests with reporting
         run: |
-          mkdir -p test-results
-          npx playwright test --reporter=json,line --output=test-results/results.json || echo "Tests completed with exit code $?"
-          ls -la test-results/
+          mkdir -p test-results allure-results
+          npx playwright test --reporter=line,allure-playwright || echo "Tests completed with exit code $?"
 
-      - name: Upload test results
-        if: always()
+      # Шаг 5: Сохранение результатов
+      - name: Upload test artifacts
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: test-results
-          path: test-results
-          retention-days: 20
-          if-no-files-found: ignore
+          name: test-artifacts
+          path: |
+            test-results/
+            allure-results/
+          retention-days: 3
+          if-no-files-found: warn
 
-      - name: Setup Allure environment
+      # Шаг 6: Подготовка Allure отчета
+      - name: Prepare Allure environment
         if: always()
         run: |
           npm install -g allure-commandline
-          mkdir -p allure-results
-
-      - name: Checkout gh-pages branch
-        if: always()
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-          fetch-depth: 0
-
-      - name: Generate Allure report
-        if: always()
-        run: |
           allure generate allure-results --clean -o allure-report
-          ls -la allure-report/
 
-      - name: Install Allure Notifications
+      # Шаг 7: Работа с историей отчетов
+      - name: Setup report history
         if: always()
         run: |
-          npm install -g https://github.com/qa-guru/allure-notifications.git
-          echo "Allure Notifications version: $(allure-notifications --version)"
+          mkdir -p allure-report/history
+          git fetch origin gh-pages || echo "No existing gh-pages branch"
+          git worktree add --track -B gh-pages gh-pages origin/gh-pages || git checkout --orphan gh-pages
+          [ -d "gh-pages/allure-history" ] && cp -r gh-pages/allure-history/. allure-report/history/
 
-      - name: Send Telegram Notification
+      # Шаг 8: Отправка уведомления в Telegram
+      - name: Send Telegram notification
         if: always()
         run: |
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.repository }}/allure-report"
@@ -86,6 +85,7 @@ jobs:
             --env.repo="${{ github.repository }}" \
             --env.buildUrl="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
+      # Шаг 9: Деплой отчета
       - name: Deploy Allure report
         if: success()
         uses: peaceiris/actions-gh-pages@v4
