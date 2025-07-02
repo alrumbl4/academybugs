@@ -37,7 +37,6 @@ jobs:
       - name: Install Playwright browsers
         uses: browser-actions/setup-playwright@v1
         with:
-          browsers: ['chromium', 'firefox', 'webkit']
           install-deps: true
       
       # Test execution with improved reporting
