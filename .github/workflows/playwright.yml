@@ -75,7 +75,17 @@ jobs:
           java-version: '17'
 
       - name: Send Telegram notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          export TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          export TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}  
-          java -DconfigFile=notifications/telegram.json -jar notifications/allure-notifications-4.9.0.jar
+          # Подготовка конфига с подстановкой переменных
+          sed -i "s|\$TELEGRAM_BOT_TOKEN|$TELEGRAM_BOT_TOKEN|g" notifications/telegram.json
+          sed -i "s|\$TELEGRAM_CHAT_ID|$TELEGRAM_CHAT_ID|g" notifications/telegram.json
+          
+          # Запуск Allure Notifications
+          java -jar notifications/allure-notifications-4.9.0.jar \
+            --config=notifications/telegram.json
+          
+          # Возвращаем оригинальный конфиг (опционально)
+          git checkout -- notifications/telegram.json
