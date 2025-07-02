@@ -1,60 +1,32 @@
-name: Allure Report
+name: pw testsMore actions
 
 on:
   push:
-    branches:
-      - master
+    branches: [ main, master ]
   pull_request:
-    branches:
-      - master
-  # ручной запуск
+    branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  ALLURE_ENDPOINT: ${{ secrets.ALLURE_ENDPOINT }}
-  ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
-  ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
-  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
 jobs:
-  e2e:
-    timeout-minutes: 5
+  e2eTests:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout кода из репозитория
       - uses: actions/checkout@v4
 
-      # 2. Настройка Node.js
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
 
-      # 3. Установка зависимостей
-      - name: Install dependencies
-        run: npm install
+      - name: Установить пакеты
+        run: npm i
 
-      # 4. Установка Playwright
-      - name: Install Playwright
+      - name: Установить PW
         run: npx playwright install --with-deps
 
-      # 5. Устанавливаем TestOps CLI
-      - name: Setup Allure TestOps CLI
-        uses: allure-framework/setup-allurectl@v1
-        with:
-          allure-endpoint: ${{ secrets.ALLURE_ENDPOINT }}
-          allure-token: ${{ secrets.ALLURE_TOKEN }}
-          allure-project-id: ${{ secrets.ALLURE_PROJECT_ID }}
+      - name: Запустить PW
+        run: npm run test
 
-      # 6. Запускаем вотчер allurectl и собираем результаты в allure-results
-      - name: Run Playwright tests and upload to Allure TestOps
-        run: |
-          allurectl watch -- npx playwright test
-        env:
-          # Путь к папке с результатами Allure
-          ALLURE_RESULTS: './allure-results'
-
-      # 7. Сохранение отчетов Playwright
       - uses: actions/upload-artifact@v4
         if: always()
         continue-on-error: true
@@ -63,7 +35,6 @@ jobs:
           path: test-results
           retention-days: 20
 
-      # 8. Сохранение отчетов Allure
       - uses: actions/upload-artifact@v4
         if: always()
         continue-on-error: true
@@ -72,16 +43,13 @@ jobs:
           path: allure-results
           retention-days: 20
 
-      # 9. Проверить gh-pages history
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         if: always()
         continue-on-error: true
         with:
           ref: gh-pages
           path: gh-pages
 
-      # 10. Генерация Allure отчёта с историей и деплой на gh-pages
       - uses: simple-elf/allure-report-action@master
         if: always()
         id: allure-report
@@ -89,9 +57,10 @@ jobs:
           allure_results: allure-results
           gh_pages: gh-pages
           allure_report: allure-report
+          allure_history: allure-history
           keep_reports: 20
 
-      - name: Deploy report
+      - name: deploy report
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -99,14 +68,12 @@ jobs:
           publish_branch: gh-pages
           publish_dir: allure-history
 
-      # 11. Установка Java для запуска JAR файлов
       - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 12. Рендерим config.json с настоящими секретами
       - name: Render notifications config
         run: |
           mkdir -p notifications/tmp
@@ -116,7 +83,6 @@ jobs:
             notifications/config.json > notifications/tmp/config.json
         shell: bash
 
-      # 13. Отправить уведомление в Telegram с помощью Allure-Notifications
       - name: Send Telegram notification
         run: |
           java "-DconfigFile=notifications/tmp/config.json" -jar notifications/allure-notifications-4.9.0.jar
